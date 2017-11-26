@@ -103,7 +103,7 @@ class AccessScreenService : AccessibilityService() {
                 PixelFormat.TRANSLUCENT)
         params.gravity = Gravity.TOP or Gravity.RIGHT
         params.x = 0
-        params.y = 1900
+        params.y = 800
 
         if (mRatingView == null) {
             mRatingView = LayoutInflater.from(applicationContext).inflate(R.layout.movie_rating, null)
