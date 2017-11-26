@@ -1,7 +1,15 @@
 package com.hotstarratings.services
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
+import android.graphics.PixelFormat
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import android.widget.TextView
+import com.hotstarratings.R
 import com.hotstarratings.logger.Logger
 import com.hotstarratings.models.Movie
 import com.hotstarratings.network.MovieFetcher
@@ -15,12 +23,20 @@ import rx.schedulers.Schedulers
  * Created by kaustubh on 26/11/17.
  */
 class AccessScreenService : AccessibilityService() {
+    private var mRatingView : View? = null
+    private var mWindowManager : WindowManager? = null
+
     companion object {
         val TAG = "##AccessScreenService"
     }
 
     override fun onInterrupt() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        removeView()
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        mWindowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager?
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -31,7 +47,7 @@ class AccessScreenService : AccessibilityService() {
                 val info = it.getChild(i)
                 info?.let {
                     if (info.className == "android.widget.TextView") {
-                        // Make API call...????
+                        Logger.log(TAG, "event " + event.eventType)
                         it.text?.let {
                             if (AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED == event.eventType) {
                                 Logger.log(TAG, "-> " + it.toString())
@@ -41,8 +57,10 @@ class AccessScreenService : AccessibilityService() {
                                         .subscribe ({
                                             result ->
                                             Logger.log(TAG, result)
+                                            addView(result)
                                         }, { error ->
                                             error.printStackTrace()
+                                            removeView()
                                         })
                             }
                         }
@@ -50,6 +68,11 @@ class AccessScreenService : AccessibilityService() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        removeView()
     }
 
     fun getMovie(title: String): Observable<String> {
@@ -67,6 +90,35 @@ class AccessScreenService : AccessibilityService() {
                     subsriber.onCompleted()
                 }
             })
+        }
+    }
+
+    private fun addView(rating: String) {
+
+        val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT)
+        params.gravity = Gravity.TOP or Gravity.RIGHT
+        params.x = 0
+        params.y = 1900
+
+        if (mRatingView == null) {
+            mRatingView = LayoutInflater.from(applicationContext).inflate(R.layout.movie_rating, null)
+            mWindowManager?.addView(mRatingView, params)
+        }
+
+        mRatingView?.let {
+            it.findViewById<TextView>(R.id.rating).text = rating + " /10"
+            it.visibility = View.VISIBLE
+        }
+    }
+
+    private fun removeView() {
+        mRatingView?.let {
+            mWindowManager?.removeView(mRatingView)
         }
     }
 }
